@@ -76,95 +76,122 @@
 }
 
 .preview-header {
-    background: linear-gradient(135deg, #667eea, #764ba2) !important;
-    color: white !important;
-    padding: 15px 20px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    color: #333 !important;
+    padding: 12px 16px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+    cursor: move !important;
+    user-select: none !important;
 }
 
 .preview-header-left {
     display: flex !important;
     align-items: center !important;
-    gap: 15px !important;
+    gap: 12px !important;
     flex: 1 !important;
     min-width: 0 !important;
 }
 
 .preview-favicon {
-    width: 24px !important;
-    height: 24px !important;
-    border-radius: 4px !important;
-    background: white !important;
-    padding: 2px !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 3px !important;
     flex-shrink: 0 !important;
 }
 
+.preview-title-area {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
 .preview-title {
-    font-size: 16px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
+    color: #1a1a1a !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    max-width: 400px !important;
-    margin: 0 !important;
+    max-width: 350px !important;
+    margin: 0 0 2px 0 !important;
+    line-height: 1.2 !important;
 }
 
 .preview-url {
-    font-size: 12px !important;
-    opacity: 0.8 !important;
-    background: rgba(255,255,255,0.2) !important;
-    padding: 4px 8px !important;
-    border-radius: 12px !important;
+    font-size: 11px !important;
+    color: #666 !important;
+    background: rgba(0,0,0,0.05) !important;
+    padding: 2px 6px !important;
+    border-radius: 10px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    max-width: 300px !important;
+    max-width: 280px !important;
     margin: 0 !important;
+    display: inline-block !important;
 }
 
 .preview-controls {
     display: flex !important;
     align-items: center !important;
-    gap: 10px !important;
+    gap: 4px !important;
 }
 
-.control-btn {
-    background: rgba(255,255,255,0.2) !important;
+.icon-btn {
+    background: rgba(0,0,0,0.05) !important;
     border: none !important;
-    color: white !important;
-    padding: 8px 12px !important;
+    color: #555 !important;
+    padding: 8px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    transition: all 0.2s ease !important;
     display: flex !important;
     align-items: center !important;
-    gap: 5px !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    width: 32px !important;
+    height: 32px !important;
 }
 
-.control-btn:hover {
-    background: rgba(255,255,255,0.3) !important;
+.icon-btn:hover {
+    background: rgba(0,0,0,0.1) !important;
+    color: #333 !important;
     transform: translateY(-1px) !important;
+}
+
+.icon-btn.active {
+    background: #007AFF !important;
+    color: white !important;
+}
+
+.icon-btn.active:hover {
+    background: #0056CC !important;
 }
 
 .close-btn {
     background: #ff4757 !important;
+    border: none !important;
+    color: white !important;
     padding: 8px !important;
-    border-radius: 50% !important;
-    width: 36px !important;
-    height: 36px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    transition: all 0.2s ease !important;
+    width: 32px !important;
+    height: 32px !important;
+    margin-left: 8px !important;
 }
 
 .close-btn:hover {
     background: #ff3838 !important;
+    transform: translateY(-1px) !important;
 }
 
 .preview-content {

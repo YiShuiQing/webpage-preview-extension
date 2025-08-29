@@ -21,6 +21,12 @@ class FullWebpagePreview {
         this.customWidth = null;
         this.customHeight = null;
         this.hasCustomSize = false;
+        this.isPinned = false; // 添加固定状态
+        this.isDraggingWindow = false; // 添加窗口拖拽状态
+        this.windowStartX = 0;
+        this.windowStartY = 0;
+        this.windowStartLeft = 0;
+        this.windowStartTop = 0;
         this.init();
     }
 
@@ -37,9 +43,18 @@ class FullWebpagePreview {
     }
 
     loadSettings() {
-        chrome.storage.sync.get(['enabled'], (result) => {
-            this.isEnabled = result.enabled !== false;
-        });
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
+            try {
+                chrome.storage.sync.get(['enabled'], (result) => {
+                    this.isEnabled = result.enabled !== false;
+                });
+            } catch (error) {
+                console.log('Chrome storage not available:', error);
+                this.isEnabled = true; // 默认启用
+            }
+        } else {
+            this.isEnabled = true; // 默认启用
+        }
     }
 
     createUI() {
@@ -57,23 +72,34 @@ class FullWebpagePreview {
         
         this.previewElement.innerHTML = `
             <div class="preview-container">
-                <div class="preview-header">
+                <div class="preview-header" id="preview-header">
                     <div class="preview-header-left">
                         <img id="preview-favicon" class="preview-favicon" src="" alt="">
-                        <div>
+                        <div class="preview-title-area">
                             <div id="preview-title" class="preview-title">加载中...</div>
                             <div id="preview-url" class="preview-url"></div>
                         </div>
                     </div>
                     <div class="preview-controls">
-                        <button class="control-btn" id="open-in-new-tab">
-                            🔗 新标签页打开
+                        <button class="icon-btn" id="pin-preview" title="固定预览窗口">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M16 12V4H17V2H7V4H8V12L6 14V16H11V22H13V16H18V14L16 12Z"/>
+                            </svg>
                         </button>
-                        <button class="control-btn" id="copy-link">
-                            📋 复制链接
+                        <button class="icon-btn" id="refresh-preview" title="刷新预览">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
+                            </svg>
                         </button>
-                        <button class="close-btn" id="close-preview">
-                            ✕
+                        <button class="icon-btn" id="open-new-tab" title="在新标签页打开">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+                            </svg>
+                        </button>
+                        <button class="close-btn" id="close-preview" title="关闭预览">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -83,7 +109,7 @@ class FullWebpagePreview {
                         <div class="loading-text">正在加载网页...</div>
                         <div id="loading-url" class="loading-url"></div>
                     </div>
-                    <iframe id="preview-iframe" class="preview-iframe" src="" sandbox="allow-scripts allow-forms allow-popups allow-top-navigation"></iframe>
+                    <iframe id="preview-iframe" class="preview-iframe" src=""></iframe>
                 </div>
                 <div id="preview-resizer" class="preview-resizer"></div>
             </div>
@@ -154,26 +180,21 @@ class FullWebpagePreview {
             this.hidePreview();
         });
 
-        document.getElementById('open-in-new-tab').addEventListener('click', () => {
-            if (this.currentUrl) {
-                window.open(this.currentUrl, '_blank');
-            }
+        // 固定预览按钮
+        document.getElementById('pin-preview').addEventListener('click', () => {
+            this.togglePin();
         });
 
-        document.getElementById('copy-link').addEventListener('click', () => {
+        // 刷新预览按钮
+        document.getElementById('refresh-preview').addEventListener('click', () => {
+            this.refreshPreview();
+        });
+
+        // 新标签页打开按钮
+        document.getElementById('open-new-tab').addEventListener('click', () => {
             if (this.currentUrl) {
-                navigator.clipboard.writeText(this.currentUrl).then(() => {
-                    this.showNotification('链接已复制到剪贴板！');
-                }).catch(() => {
-                    // 备用方案
-                    const textArea = document.createElement('textarea');
-                    textArea.value = this.currentUrl;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    this.showNotification('链接已复制到剪贴板！');
-                });
+                window.open(this.currentUrl, '_blank');
+                this.hidePreview();
             }
         });
 
@@ -197,19 +218,26 @@ class FullWebpagePreview {
 
         // 监听设置变化
         if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-            chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-                if (request.action === 'toggleEnabled') {
-                    this.isEnabled = request.enabled;
-                    if (!this.isEnabled) {
-                        this.hidePreview();
-                        this.altIndicator.classList.remove('active');
+            try {
+                chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+                    if (request.action === 'toggleEnabled') {
+                        this.isEnabled = request.enabled;
+                        if (!this.isEnabled) {
+                            this.hidePreview();
+                            this.altIndicator.classList.remove('active');
+                        }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                console.log('Chrome runtime not available:', error);
+            }
         }
 
         // 修复后的拉伸功能
         this.setupResizer();
+        
+        // 添加窗口拖拽功能
+        this.setupWindowDragging();
     }
 
     setupResizer() {
@@ -330,6 +358,127 @@ class FullWebpagePreview {
         });
     }
 
+    setupWindowDragging() {
+        const header = document.getElementById('preview-header');
+        let isDragging = false;
+        
+        const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const deltaX = e.clientX - this.windowStartX;
+            const deltaY = e.clientY - this.windowStartY;
+            
+            const newLeft = this.windowStartLeft + deltaX;
+            const newTop = this.windowStartTop + deltaY;
+            
+            // 限制拖拽范围，确保窗口不会完全移出屏幕
+            const maxLeft = window.innerWidth - 100;
+            const maxTop = window.innerHeight - 100;
+            const minLeft = -this.previewContainer.offsetWidth + 100;
+            const minTop = 0;
+            
+            const constrainedLeft = Math.max(minLeft, Math.min(maxLeft, newLeft));
+            const constrainedTop = Math.max(minTop, Math.min(maxTop, newTop));
+            
+            this.previewContainer.style.setProperty('left', constrainedLeft + 'px', 'important');
+            this.previewContainer.style.setProperty('top', constrainedTop + 'px', 'important');
+            this.previewContainer.style.setProperty('transform', 'none', 'important');
+        };
+        
+        const handleMouseUp = (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            isDragging = false;
+            this.isDraggingWindow = false;
+            
+            document.removeEventListener('mousemove', handleMouseMove, true);
+            document.removeEventListener('mouseup', handleMouseUp, true);
+            
+            document.body.classList.remove('window-dragging');
+            header.style.cursor = 'move';
+            
+            if (this.previewIframe) {
+                this.previewIframe.style.pointerEvents = '';
+            }
+        };
+        
+        header.addEventListener('mousedown', (e) => {
+            // 不在按钮上才允许拖拽
+            if (e.target.closest('.icon-btn') || e.target.closest('.close-btn')) {
+                return;
+            }
+            
+            if (e.button !== 0) return; // 只响应左键
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isDragging = true;
+            this.isDraggingWindow = true;
+            
+            const rect = this.previewContainer.getBoundingClientRect();
+            this.windowStartX = e.clientX;
+            this.windowStartY = e.clientY;
+            this.windowStartLeft = rect.left;
+            this.windowStartTop = rect.top;
+            
+            document.addEventListener('mousemove', handleMouseMove, true);
+            document.addEventListener('mouseup', handleMouseUp, true);
+            
+            document.body.classList.add('window-dragging');
+            header.style.cursor = 'grabbing';
+            
+            if (this.previewIframe) {
+                this.previewIframe.style.pointerEvents = 'none';
+            }
+        });
+        
+        // 鼠标悬停时显示可拖拽提示
+        header.addEventListener('mouseenter', () => {
+            if (!this.isDraggingWindow && !this.isResizing) {
+                header.style.cursor = 'move';
+            }
+        });
+        
+        header.addEventListener('mouseleave', () => {
+            if (!this.isDraggingWindow) {
+                header.style.cursor = 'default';
+            }
+        });
+    }
+
+    togglePin() {
+        this.isPinned = !this.isPinned;
+        const pinBtn = document.getElementById('pin-preview');
+        
+        if (this.isPinned) {
+            pinBtn.classList.add('active');
+            pinBtn.title = '取消固定';
+            this.showNotification('预览窗口已固定');
+        } else {
+            pinBtn.classList.remove('active');
+            pinBtn.title = '固定预览窗口';
+            this.showNotification('预览窗口已取消固定');
+        }
+    }
+
+    refreshPreview() {
+        if (this.currentUrl && this.previewIframe) {
+            this.showLoading(this.currentUrl);
+            this.previewIframe.src = '';
+            setTimeout(() => {
+                this.previewIframe.src = this.currentUrl;
+            }, 100);
+            this.showNotification('预览内容已刷新');
+        }
+    }
+
     isLinkElement(element) {
         return element && element.tagName === 'A' && element.href && element.href.startsWith('http');
     }
@@ -379,14 +528,31 @@ class FullWebpagePreview {
 
     hidePreview() {
         clearTimeout(this.showTimeout);
+        
+        // 如果窗口被固定，不自动关闭
+        if (this.isPinned) {
+            return;
+        }
+        
         this.previewElement.classList.remove('show');
         this.isLockedOpen = false;
+        
+        // 重置窗口位置
+        this.previewContainer.style.removeProperty('left');
+        this.previewContainer.style.removeProperty('top');
+        this.previewContainer.style.setProperty('transform', 'translate(-50%, -50%) scale(0.9)', 'important');
         
         // 清空iframe以节省资源
         setTimeout(() => {
             if (!this.previewElement.classList.contains('show')) {
                 this.previewIframe.src = '';
                 this.currentUrl = null;
+                this.isPinned = false;
+                const pinBtn = document.getElementById('pin-preview');
+                if (pinBtn) {
+                    pinBtn.classList.remove('active');
+                    pinBtn.title = '固定预览窗口';
+                }
             }
         }, 400);
     }
