@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "完整网页预览扩展",
+  "version": "1.0.0",
+  "description": "按住Alt键悬停链接即可预览完整网页内容，无需打开新标签页",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "完整网页预览扩展"
+  }
+}
