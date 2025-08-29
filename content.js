@@ -83,7 +83,7 @@ class FullWebpagePreview {
                         <div class="loading-text">正在加载网页...</div>
                         <div id="loading-url" class="loading-url"></div>
                     </div>
-                    <iframe id="preview-iframe" class="preview-iframe" src="" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"></iframe>
+                    <iframe id="preview-iframe" class="preview-iframe" src="" sandbox="allow-scripts allow-forms allow-popups allow-top-navigation"></iframe>
                 </div>
                 <div id="preview-resizer" class="preview-resizer"></div>
             </div>
