@@ -177,7 +177,8 @@ class FullWebpagePreview {
 
         // 预览窗口控制按钮
         document.getElementById('close-preview').addEventListener('click', () => {
-            this.hidePreview();
+            // 强制关闭预览窗口，不管是否固定
+            this.forceHidePreview();
         });
 
         // 固定预览按钮
@@ -199,17 +200,19 @@ class FullWebpagePreview {
         });
 
         // 修改固定状态下的鼠标事件处理
-        this.previewElement.addEventListener('mouseenter', () => {
+        this.previewContainer.addEventListener('mouseenter', () => {
             if (this.isPinned) {
                 // 鼠标进入预览窗口时，显示遮罩层
                 this.previewElement.style.setProperty('background', 'rgba(0, 0, 0, 0.8)', 'important');
+                this.previewElement.style.setProperty('backdrop-filter', 'blur(5px)', 'important');
             }
         });
 
-        this.previewElement.addEventListener('mouseleave', () => {
+        this.previewContainer.addEventListener('mouseleave', () => {
             if (this.isPinned) {
-                // 鼠标离开预览窗口时，隐藏遮罩层
+                // 鼠标离开预览窗口时，隐藏遮罩层，恢复清晰背景
                 this.previewElement.style.setProperty('background', 'transparent', 'important');
+                this.previewElement.style.setProperty('backdrop-filter', 'none', 'important');
             }
         });
 
@@ -477,12 +480,14 @@ class FullWebpagePreview {
             pinBtn.title = '取消固定';
             // 固定时立即设置背景为透明，允许看到原始页面
             this.previewElement.style.setProperty('background', 'transparent', 'important');
+            this.previewElement.style.setProperty('backdrop-filter', 'none', 'important');
             this.showNotification('预览窗口已固定 - 鼠标移入窗口时显示遮罩');
         } else {
             pinBtn.classList.remove('active');
             pinBtn.title = '固定预览窗口';
             // 取消固定时恢复默认背景
             this.previewElement.style.setProperty('background', 'rgba(0, 0, 0, 0.8)', 'important');
+            this.previewElement.style.setProperty('backdrop-filter', 'blur(5px)', 'important');
             this.showNotification('预览窗口已取消固定');
         }
     }
@@ -566,14 +571,10 @@ class FullWebpagePreview {
             if (!this.previewElement.classList.contains('show')) {
                 this.previewIframe.src = '';
                 this.currentUrl = null;
-                this.isPinned = false;
-                const pinBtn = document.getElementById('pin-preview');
-                if (pinBtn) {
-                    pinBtn.classList.remove('active');
-                    pinBtn.title = '固定预览窗口';
-                }
+                // 注意：不要在这里重置isPinned状态，因为用户可能只是暂时隐藏
                 // 重置背景样式
                 this.previewElement.style.setProperty('background', 'rgba(0, 0, 0, 0.8)', 'important');
+                this.previewElement.style.setProperty('backdrop-filter', 'blur(5px)', 'important');
             }
         }, 400);
     }
@@ -616,6 +617,10 @@ class FullWebpagePreview {
         // 如果是固定状态，初始化背景为透明
         if (this.isPinned) {
             this.previewElement.style.setProperty('background', 'transparent', 'important');
+            this.previewElement.style.setProperty('backdrop-filter', 'none', 'important');
+        } else {
+            this.previewElement.style.setProperty('background', 'rgba(0, 0, 0, 0.8)', 'important');
+            this.previewElement.style.setProperty('backdrop-filter', 'blur(5px)', 'important');
         }
         
         // 加载iframe
@@ -678,6 +683,36 @@ class FullWebpagePreview {
         }
     }
 
+    forceHidePreview() {
+        clearTimeout(this.showTimeout);
+        
+        this.previewElement.classList.remove('show');
+        this.isLockedOpen = false;
+        
+        // 重置固定状态
+        this.isPinned = false;
+        const pinBtn = document.getElementById('pin-preview');
+        if (pinBtn) {
+            pinBtn.classList.remove('active');
+            pinBtn.title = '固定预览窗口';
+        }
+        
+        // 重置窗口位置
+        this.previewContainer.style.removeProperty('left');
+        this.previewContainer.style.removeProperty('top');
+        this.previewContainer.style.setProperty('transform', 'translate(-50%, -50%) scale(0.9)', 'important');
+        
+        // 清空iframe以节省资源
+        setTimeout(() => {
+            if (!this.previewElement.classList.contains('show')) {
+                this.previewIframe.src = '';
+                this.currentUrl = null;
+                // 重置背景样式
+                this.previewElement.style.setProperty('background', 'rgba(0, 0, 0, 0.8)', 'important');
+                this.previewElement.style.setProperty('backdrop-filter', 'blur(5px)', 'important');
+            }
+        }, 400);
+    }
     showNotification(message) {
         const notification = document.createElement('div');
         notification.style.cssText = `
