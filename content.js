@@ -198,9 +198,24 @@ class FullWebpagePreview {
             }
         });
 
-        // 点击背景关闭
+        // 修改固定状态下的鼠标事件处理
+        this.previewElement.addEventListener('mouseenter', () => {
+            if (this.isPinned) {
+                // 鼠标进入预览窗口时，显示遮罩层
+                this.previewElement.style.setProperty('background', 'rgba(0, 0, 0, 0.8)', 'important');
+            }
+        });
+
+        this.previewElement.addEventListener('mouseleave', () => {
+            if (this.isPinned) {
+                // 鼠标离开预览窗口时，隐藏遮罩层
+                this.previewElement.style.setProperty('background', 'transparent', 'important');
+            }
+        });
+
+        // 点击背景关闭（只在非固定状态下）
         this.previewElement.addEventListener('click', (e) => {
-            if (e.target === this.previewElement) {
+            if (e.target === this.previewElement && !this.isPinned) {
                 this.hidePreview();
             }
         });
@@ -460,10 +475,14 @@ class FullWebpagePreview {
         if (this.isPinned) {
             pinBtn.classList.add('active');
             pinBtn.title = '取消固定';
-            this.showNotification('预览窗口已固定');
+            // 固定时立即设置背景为透明，允许看到原始页面
+            this.previewElement.style.setProperty('background', 'transparent', 'important');
+            this.showNotification('预览窗口已固定 - 鼠标移入窗口时显示遮罩');
         } else {
             pinBtn.classList.remove('active');
             pinBtn.title = '固定预览窗口';
+            // 取消固定时恢复默认背景
+            this.previewElement.style.setProperty('background', 'rgba(0, 0, 0, 0.8)', 'important');
             this.showNotification('预览窗口已取消固定');
         }
     }
@@ -553,6 +572,8 @@ class FullWebpagePreview {
                     pinBtn.classList.remove('active');
                     pinBtn.title = '固定预览窗口';
                 }
+                // 重置背景样式
+                this.previewElement.style.setProperty('background', 'rgba(0, 0, 0, 0.8)', 'important');
             }
         }, 400);
     }
@@ -571,22 +592,31 @@ class FullWebpagePreview {
         document.getElementById('preview-url').textContent = url;
         document.getElementById('preview-favicon').src = `https://www.google.com/s2/favicons?sz=32&domain=${domain}`;
         
-        // 应用自定义尺寸（如果存在）
+        // 计算默认宽度为浏览器窗口的一半
+        const defaultWidth = Math.floor(window.innerWidth * 0.5);
+        const defaultHeight = Math.floor(window.innerHeight * 0.85);
+        
+        // 应用自定义尺寸（如果存在），否则使用新的默认尺寸
         if (this.hasCustomSize && this.customWidth && this.customHeight) {
             this.previewContainer.style.setProperty('width', this.customWidth + 'px', 'important');
             this.previewContainer.style.setProperty('height', this.customHeight + 'px', 'important');
             this.previewContainer.style.setProperty('max-width', 'none', 'important');
             this.previewContainer.style.setProperty('max-height', 'none', 'important');
         } else {
-            // 重置为默认样式
-            this.previewContainer.style.removeProperty('width');
-            this.previewContainer.style.removeProperty('height');
-            this.previewContainer.style.removeProperty('max-width');
-            this.previewContainer.style.removeProperty('max-height');
+            // 设置新的默认尺寸为浏览器宽度的一半
+            this.previewContainer.style.setProperty('width', defaultWidth + 'px', 'important');
+            this.previewContainer.style.setProperty('height', defaultHeight + 'px', 'important');
+            this.previewContainer.style.setProperty('max-width', 'none', 'important');
+            this.previewContainer.style.setProperty('max-height', 'none', 'important');
         }
         
         // 显示预览窗口
         this.previewElement.classList.add('show');
+        
+        // 如果是固定状态，初始化背景为透明
+        if (this.isPinned) {
+            this.previewElement.style.setProperty('background', 'transparent', 'important');
+        }
         
         // 加载iframe
         setTimeout(() => {
